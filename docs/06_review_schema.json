@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CharacterImageReview",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "character_code": {
+      "type": "string"
+    },
+    "is_valid_candidate": {
+      "type": "boolean"
+    },
+    "total_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "dimension_scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "style_unity": { "type": "number", "minimum": 0, "maximum": 25 },
+        "character_identity": { "type": "number", "minimum": 0, "maximum": 20 },
+        "ratio_accuracy": { "type": "number", "minimum": 0, "maximum": 20 },
+        "pose_prop_match": { "type": "number", "minimum": 0, "maximum": 10 },
+        "palette_match": { "type": "number", "minimum": 0, "maximum": 10 },
+        "sheet_integrity": { "type": "number", "minimum": 0, "maximum": 10 },
+        "master_potential": { "type": "number", "minimum": 0, "maximum": 5 }
+      },
+      "required": [
+        "style_unity",
+        "character_identity",
+        "ratio_accuracy",
+        "pose_prop_match",
+        "palette_match",
+        "sheet_integrity",
+        "master_potential"
+      ]
+    },
+    "failure_tags": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "enum": [
+          "ratio_too_tall",
+          "legs_too_long",
+          "head_too_small",
+          "style_drift",
+          "palette_off",
+          "prop_missing",
+          "expression_weak",
+          "sheet_format_broken",
+          "identity_not_distinct"
+        ]
+      }
+    },
+    "fix_suggestions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "best_use": {
+      "type": "string",
+      "enum": [
+        "discard",
+        "keep_for_reference",
+        "refine",
+        "candidate_master"
+      ]
+    }
+  },
+  "required": [
+    "character_code",
+    "is_valid_candidate",
+    "total_score",
+    "dimension_scores",
+    "failure_tags",
+    "fix_suggestions",
+    "best_use"
+  ]
+}
