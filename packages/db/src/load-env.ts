@@ -1,36 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const globalScope = globalThis as typeof globalThis & {
   __characterFactoryEnvLoaded?: boolean;
 };
-
-function findWorkspaceRoot(startDirectory: string): string | null {
-  let currentDirectory = startDirectory;
-
-  while (true) {
-    if (fs.existsSync(path.join(currentDirectory, "pnpm-workspace.yaml"))) {
-      return currentDirectory;
-    }
-
-    const parentDirectory = path.dirname(currentDirectory);
-
-    if (parentDirectory === currentDirectory) {
-      return null;
-    }
-
-    currentDirectory = parentDirectory;
-  }
-}
+const workspaceRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../.."
+);
 
 function listCandidateEnvFiles(rootDirectory: string): string[] {
   const nodeEnv = process.env.NODE_ENV ?? "development";
 
   return [
-    path.join(rootDirectory, `.env.${nodeEnv}.local`),
-    path.join(rootDirectory, ".env.local"),
-    path.join(rootDirectory, `.env.${nodeEnv}`),
-    path.join(rootDirectory, ".env")
+    path.join(/* turbopackIgnore: true */ rootDirectory, `.env.${nodeEnv}.local`),
+    path.join(/* turbopackIgnore: true */ rootDirectory, ".env.local"),
+    path.join(/* turbopackIgnore: true */ rootDirectory, `.env.${nodeEnv}`),
+    path.join(/* turbopackIgnore: true */ rootDirectory, ".env")
   ];
 }
 
@@ -39,9 +26,11 @@ export function ensureRootEnvLoaded(): void {
     return;
   }
 
-  const workspaceRoot = findWorkspaceRoot(process.cwd());
-
-  if (!workspaceRoot) {
+  if (
+    !fs.existsSync(
+      path.join(/* turbopackIgnore: true */ workspaceRoot, "pnpm-workspace.yaml")
+    )
+  ) {
     globalScope.__characterFactoryEnvLoaded = true;
     return;
   }

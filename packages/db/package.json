@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@character-factory/core": "workspace:*",
+    "@character-factory/prompt-compiler": "workspace:*",
     "drizzle-orm": "0.45.2",
     "ioredis": "5.10.1",
     "pg": "8.20.0"

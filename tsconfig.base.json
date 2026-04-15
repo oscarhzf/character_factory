@@ -17,6 +17,8 @@
     "paths": {
       "@character-factory/core": ["packages/core/src/index.ts"],
       "@character-factory/core/*": ["packages/core/src/*"],
+      "@character-factory/prompt-compiler": ["packages/prompt-compiler/src/index.ts"],
+      "@character-factory/prompt-compiler/*": ["packages/prompt-compiler/src/*"],
       "@character-factory/db": ["packages/db/src/index.ts"],
       "@character-factory/db/*": ["packages/db/src/*"]
     }

@@ -9,6 +9,7 @@
     "./character-schema": "./src/character-schema.ts",
     "./env": "./src/env.ts",
     "./health-schema": "./src/health-schema.ts",
+    "./prompt-schema": "./src/prompt-schema.ts",
     "./universe-schema": "./src/universe-schema.ts"
   },
   "scripts": {
