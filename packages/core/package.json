@@ -1,0 +1,22 @@
+{
+  "name": "@character-factory/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api-response": "./src/api-response.ts",
+    "./character-schema": "./src/character-schema.ts",
+    "./env": "./src/env.ts",
+    "./health-schema": "./src/health-schema.ts",
+    "./universe-schema": "./src/universe-schema.ts"
+  },
+  "scripts": {
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --pool=threads --passWithNoTests"
+  },
+  "dependencies": {
+    "zod": "4.3.6"
+  }
+}

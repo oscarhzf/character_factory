@@ -1,0 +1,21 @@
+{
+  "name": "@character-factory/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --pool=threads --passWithNoTests"
+  },
+  "dependencies": {
+    "@character-factory/core": "workspace:*",
+    "@character-factory/db": "workspace:*",
+    "next": "16.2.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "zod": "4.3.6"
+  }
+}
