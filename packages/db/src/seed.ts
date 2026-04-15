@@ -1,8 +1,11 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { createCharacter, updateCharacter } from "./services/character-service";
 import { createUniverse, updateUniverse } from "./services/universe-service";
 import { findCharacterRowByCode } from "./repositories/character-repository";
 import { findUniverseRowByCode } from "./repositories/universe-repository";
-import { getPool } from "./client";
+import { closePool } from "./client";
 
 const demoUniversePayload = {
   code: "GBA-URBAN",
@@ -92,11 +95,23 @@ async function main() {
   }
 
   console.log("Demo seed completed.");
-  await getPool().end();
+  await closePool();
 }
 
-main().catch(async (error) => {
-  console.error(error);
-  await getPool().end();
-  process.exitCode = 1;
-});
+function isDirectExecution(): boolean {
+  const entryPoint = process.argv[1];
+
+  if (!entryPoint) {
+    return false;
+  }
+
+  return path.resolve(entryPoint) === fileURLToPath(import.meta.url);
+}
+
+if (isDirectExecution()) {
+  main().catch(async (error) => {
+    console.error(error);
+    await closePool();
+    process.exitCode = 1;
+  });
+}

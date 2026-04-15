@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { getPool } from "./client";
+import { closePool, getPool } from "./client";
 
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(sourceDirectory, "../../../");
@@ -66,6 +66,16 @@ export async function runMigrations(): Promise<string[]> {
   return pendingMigrations;
 }
 
+function isDirectExecution(): boolean {
+  const entryPoint = process.argv[1];
+
+  if (!entryPoint) {
+    return false;
+  }
+
+  return path.resolve(entryPoint) === fileURLToPath(import.meta.url);
+}
+
 async function main(): Promise<void> {
   const pendingMigrations = await runMigrations();
 
@@ -77,11 +87,13 @@ async function main(): Promise<void> {
     console.log("No pending migrations.");
   }
 
-  await getPool().end();
+  await closePool();
 }
 
-main().catch(async (error) => {
-  console.error(error);
-  await getPool().end();
-  process.exitCode = 1;
-});
+if (isDirectExecution()) {
+  main().catch(async (error) => {
+    console.error(error);
+    await closePool();
+    process.exitCode = 1;
+  });
+}
