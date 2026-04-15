@@ -9,4 +9,3 @@ coverage/
 .env.*.local
 .tools/
 *.tsbuildinfo
-pnpm-lock.yaml
