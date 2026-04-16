@@ -36,7 +36,8 @@ export async function PATCH(
   try {
     const { id } = entityIdParamsSchema.parse(await context.params);
     const payload = characterUpdateInputSchema.parse(await request.json());
-    const character = await updateCharacter(id, payload);
+    await updateCharacter(id, payload);
+    const character = await getCharacter(id);
     return NextResponse.json(createSuccessResponse(character));
   } catch (error) {
     return createRouteErrorResponse(error);

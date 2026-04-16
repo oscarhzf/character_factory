@@ -45,21 +45,23 @@ export async function getDatabaseHealth(): Promise<ApplicationHealth["db"]> {
 
 export async function getRedisHealth(): Promise<ApplicationHealth["redis"]> {
   ensureRootEnvLoaded();
-  const env = readServerEnv();
-
-  if (!env.REDIS_URL) {
-    return {
-      status: "not_configured",
-      message: "REDIS_URL is not configured."
-    };
-  }
-
-  const client = new Redis(env.REDIS_URL, {
-    lazyConnect: true,
-    maxRetriesPerRequest: 0
-  });
+  let client: Redis | null = null;
 
   try {
+    const env = readServerEnv();
+
+    if (!env.REDIS_URL) {
+      return {
+        status: "not_configured",
+        message: "REDIS_URL is not configured."
+      };
+    }
+
+    client = new Redis(env.REDIS_URL, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 0
+    });
+
     await client.connect();
     const result = await client.ping();
 
@@ -73,44 +75,52 @@ export async function getRedisHealth(): Promise<ApplicationHealth["redis"]> {
       message: error instanceof Error ? error.message : "Redis unavailable."
     };
   } finally {
-    client.disconnect();
+    client?.disconnect();
   }
 }
 
 export async function getStorageHealth(): Promise<ApplicationHealth["storage"]> {
   ensureRootEnvLoaded();
-  const env = readServerEnv();
+  try {
+    const env = readServerEnv();
 
-  if (!env.STORAGE_PROVIDER) {
+    if (!env.STORAGE_PROVIDER) {
+      return {
+        status: "not_configured",
+        provider: null,
+        message: "Storage provider is not configured."
+      };
+    }
+
+    const requiredFields = [
+      env.STORAGE_ENDPOINT,
+      env.STORAGE_BUCKET,
+      env.STORAGE_ACCESS_KEY_ID,
+      env.STORAGE_SECRET_ACCESS_KEY
+    ];
+
+    const hasMissingField = requiredFields.some(
+      (value) => value === undefined || value.trim().length === 0
+    );
+
+    if (hasMissingField) {
+      return {
+        status: "error",
+        provider: env.STORAGE_PROVIDER,
+        message: "Storage configuration is incomplete."
+      };
+    }
+
     return {
-      status: "not_configured",
-      provider: null,
-      message: "Storage provider is not configured."
+      status: "ok",
+      provider: env.STORAGE_PROVIDER,
+      message: "configured"
     };
-  }
-
-  const requiredFields = [
-    env.STORAGE_ENDPOINT,
-    env.STORAGE_BUCKET,
-    env.STORAGE_ACCESS_KEY_ID,
-    env.STORAGE_SECRET_ACCESS_KEY
-  ];
-
-  const hasMissingField = requiredFields.some(
-    (value) => value === undefined || value.trim().length === 0
-  );
-
-  if (hasMissingField) {
+  } catch (error) {
     return {
       status: "error",
-      provider: env.STORAGE_PROVIDER,
-      message: "Storage configuration is incomplete."
+      provider: null,
+      message: error instanceof Error ? error.message : "Storage unavailable."
     };
   }
-
-  return {
-    status: "ok",
-    provider: env.STORAGE_PROVIDER,
-    message: "configured"
-  };
 }
