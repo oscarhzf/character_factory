@@ -22,7 +22,7 @@ describe("deleteUniverse", () => {
     repositoryMocks.countCharactersForUniverse.mockResolvedValue(1);
 
     await expect(
-      deleteUniverse("11111111-1111-1111-1111-111111111111")
+      deleteUniverse("11111111-1111-4111-8111-111111111111")
     ).rejects.toMatchObject({
       name: "ServiceError",
       code: "DEPENDENCY_CONFLICT",

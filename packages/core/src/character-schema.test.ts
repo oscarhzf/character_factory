@@ -13,14 +13,14 @@ import {
 describe("character schema serialization", () => {
   it("fills missing structured fields with explicit defaults", () => {
     const result = serializeCharacterInput({
-      universeId: "11111111-1111-1111-1111-111111111111",
+      universeId: "11111111-1111-4111-8111-111111111111",
       code: "  GZ-V1  ",
       name: "  广州  ",
       status: "draft"
     });
 
     expect(result).toMatchObject({
-      universeId: "11111111-1111-1111-1111-111111111111",
+      universeId: "11111111-1111-4111-8111-111111111111",
       code: "GZ-V1",
       name: "广州",
       description: "",
