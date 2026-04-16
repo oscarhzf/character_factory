@@ -1,4 +1,5 @@
 import {
+  entityIdParamsSchema,
   characterUpdateInputSchema,
   createSuccessResponse
 } from "@character-factory/core";
@@ -20,7 +21,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const character = await getCharacter(id);
     return NextResponse.json(createSuccessResponse(character));
   } catch (error) {
@@ -33,7 +34,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const payload = characterUpdateInputSchema.parse(await request.json());
     const character = await updateCharacter(id, payload);
     return NextResponse.json(createSuccessResponse(character));
@@ -47,7 +48,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     await deleteCharacter(id);
     return NextResponse.json(createSuccessResponse({ id }));
   } catch (error) {

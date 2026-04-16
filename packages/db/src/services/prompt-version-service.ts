@@ -19,6 +19,7 @@ import {
   insertPromptVersionRows,
   listPromptVersionRowsByCharacter
 } from "../repositories/prompt-version-repository";
+import { parseEntityId } from "../service-input";
 import { createNotFoundError, mapDatabaseError } from "../service-error";
 import { getCharacter } from "./character-service";
 import { getUniverse } from "./universe-service";
@@ -87,7 +88,8 @@ export async function listPromptVersions(
 }
 
 export async function getPromptVersion(id: string): Promise<PromptVersionRecord> {
-  const row = await findPromptVersionRowById(id);
+  const promptVersionId = parseEntityId(id);
+  const row = await findPromptVersionRowById(promptVersionId);
 
   if (!row) {
     throw createNotFoundError("Prompt version");

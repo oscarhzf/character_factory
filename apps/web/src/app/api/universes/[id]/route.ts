@@ -1,4 +1,5 @@
 import {
+  entityIdParamsSchema,
   createSuccessResponse,
   universeUpdateInputSchema
 } from "@character-factory/core";
@@ -20,7 +21,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const universe = await getUniverse(id);
     return NextResponse.json(createSuccessResponse(universe));
   } catch (error) {
@@ -33,7 +34,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const payload = universeUpdateInputSchema.parse(await request.json());
     const universe = await updateUniverse(id, payload);
     return NextResponse.json(createSuccessResponse(universe));
@@ -47,7 +48,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     await deleteUniverse(id);
     return NextResponse.json(createSuccessResponse({ id }));
   } catch (error) {

@@ -1,4 +1,7 @@
-import { createSuccessResponse } from "@character-factory/core";
+import {
+  createSuccessResponse,
+  entityIdParamsSchema
+} from "@character-factory/core";
 import { getPromptVersion } from "@character-factory/db";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -13,7 +16,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const version = await getPromptVersion(id);
     return NextResponse.json(createSuccessResponse(version));
   } catch (error) {

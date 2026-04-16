@@ -26,6 +26,13 @@ export function createDependencyError(message: string): ServiceError {
   return new ServiceError("DEPENDENCY_CONFLICT", 409, message);
 }
 
+export function createValidationError(
+  message: string,
+  details?: unknown
+): ServiceError {
+  return new ServiceError("VALIDATION_ERROR", 400, message, details);
+}
+
 export function mapDatabaseError(error: unknown): ServiceError {
   if (
     typeof error === "object" &&
@@ -52,4 +59,3 @@ export function mapDatabaseError(error: unknown): ServiceError {
 
   return new ServiceError("INTERNAL_ERROR", 500, "Unexpected server error.");
 }
-

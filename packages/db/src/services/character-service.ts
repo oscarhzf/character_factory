@@ -19,6 +19,7 @@ import {
   updateCharacterRow
 } from "../repositories/character-repository";
 import { findUniverseRowById } from "../repositories/universe-repository";
+import { parseEntityId } from "../service-input";
 import { createNotFoundError, mapDatabaseError } from "../service-error";
 
 function toCharacterRecord(
@@ -77,7 +78,8 @@ export async function listCharacters(filters?: {
 }
 
 export async function getCharacter(id: string): Promise<CharacterListItem> {
-  const row = await findCharacterRowById(id);
+  const characterId = parseEntityId(id);
+  const row = await findCharacterRowById(characterId);
 
   if (!row) {
     throw createNotFoundError("Character");
@@ -116,12 +118,14 @@ export async function updateCharacter(
   id: string,
   input: CharacterUpdateInput
 ): Promise<CharacterRecord> {
+  const characterId = parseEntityId(id);
+
   if (input.universeId) {
     await ensureUniverseExists(input.universeId);
   }
 
   try {
-    const row = await updateCharacterRow(id, {
+    const row = await updateCharacterRow(characterId, {
       universeId: input.universeId,
       code: input.code?.trim(),
       name: input.name?.trim(),
@@ -163,8 +167,10 @@ export async function updateCharacter(
 }
 
 export async function deleteCharacter(id: string): Promise<void> {
+  const characterId = parseEntityId(id);
+
   try {
-    const deleted = await deleteCharacterRow(id);
+    const deleted = await deleteCharacterRow(characterId);
 
     if (!deleted) {
       throw createNotFoundError("Character");
