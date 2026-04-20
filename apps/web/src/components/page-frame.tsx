@@ -37,6 +37,12 @@ export function PageFrame({
           >
             Prompt Debug
           </Link>
+          <Link
+            className="rounded-full border border-[var(--border)] px-3 py-1.5 hover:border-[var(--accent)]"
+            href="/jobs/new"
+          >
+            New Job
+          </Link>
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
