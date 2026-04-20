@@ -10,6 +10,7 @@ import type {
   GenerationJobRecord
 } from "@character-factory/core";
 
+import { loadJobCreateBootstrapData } from "./job-create-bootstrap";
 import { JobForm } from "@/components/job-form";
 import { PageFrame } from "@/components/page-frame";
 import { requestApi } from "@/lib/api-client";
@@ -32,6 +33,7 @@ export function JobCreateClient({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   const sortedCharacters = useMemo(
     () => [...characters].sort((left, right) => left.name.localeCompare(right.name)),
@@ -44,19 +46,21 @@ export function JobCreateClient({
     async function bootstrap() {
       setIsLoading(true);
       setErrorMessage(null);
+      setWarningMessage(null);
 
       try {
-        const [characterData, jobData] = await Promise.all([
-          requestApi<CharacterListItem[]>("/api/characters"),
-          requestApi<GenerationJobListItem[]>("/api/jobs?limit=6")
-        ]);
+        const bootstrapData = await loadJobCreateBootstrapData(
+          () => requestApi<CharacterListItem[]>("/api/characters"),
+          () => requestApi<GenerationJobListItem[]>("/api/jobs?limit=6")
+        );
 
         if (cancelled) {
           return;
         }
 
-        setCharacters(characterData);
-        setRecentJobs(jobData);
+        setCharacters(bootstrapData.characters);
+        setRecentJobs(bootstrapData.recentJobs);
+        setWarningMessage(bootstrapData.warningMessage);
       } catch (error) {
         if (cancelled) {
           return;
@@ -110,6 +114,12 @@ export function JobCreateClient({
       {errorMessage ? (
         <section className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
           {errorMessage}
+        </section>
+      ) : null}
+
+      {warningMessage ? (
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
+          {warningMessage}
         </section>
       ) : null}
 

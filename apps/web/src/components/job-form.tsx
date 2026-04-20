@@ -5,54 +5,15 @@ import type {
   CharacterListItem,
   GenerationJobCreateInput,
   ImageQuality,
-  JobMode,
-  VariantStrategy
+  JobMode
 } from "@character-factory/core";
 import { variantStrategyValues } from "@character-factory/core";
 
-interface JobFormState {
-  characterId: string;
-  mode: JobMode;
-  sourceImageId: string;
-  createdBy: string;
-  action: string;
-  expression: string;
-  prop: string;
-  view: string;
-  pose: string;
-  composition: string;
-  imagesPerVariant: string;
-  size: string;
-  quality: ImageQuality;
-  strategies: VariantStrategy[];
-}
-
-function createInitialState(
-  characters: CharacterListItem[],
-  initialCharacterId?: string
-): JobFormState {
-  const selectedCharacter =
-    characters.find((character) => character.id === initialCharacterId) ??
-    characters[0] ??
-    null;
-
-  return {
-    characterId: selectedCharacter?.id ?? "",
-    mode: "explore",
-    sourceImageId: "",
-    createdBy: "",
-    action: selectedCharacter?.variableDefaults.action ?? "",
-    expression: selectedCharacter?.variableDefaults.expression ?? "",
-    prop: selectedCharacter?.variableDefaults.prop ?? "",
-    view: selectedCharacter?.variableDefaults.view ?? "",
-    pose: selectedCharacter?.variableDefaults.pose ?? "",
-    composition: selectedCharacter?.variableDefaults.composition ?? "",
-    imagesPerVariant: "4",
-    size: "1024x1536",
-    quality: "high",
-    strategies: [...variantStrategyValues]
-  };
-}
+import {
+  createInitialJobFormState,
+  getCharacterTaskPromptFields,
+  type JobFormState
+} from "./job-form-state";
 
 export function JobForm({
   characters,
@@ -66,7 +27,7 @@ export function JobForm({
   onSubmit: (payload: GenerationJobCreateInput) => Promise<void>;
 }) {
   const [form, setForm] = useState<JobFormState>(() =>
-    createInitialState(characters, initialCharacterId)
+    createInitialJobFormState(characters, initialCharacterId)
   );
 
   const selectedCharacter =
@@ -112,17 +73,12 @@ export function JobForm({
           label="Character"
           onChange={(value) => {
             const character = characters.find((item) => item.id === value) ?? null;
+            const taskPromptFields = getCharacterTaskPromptFields(character);
 
             setForm((current) => ({
               ...current,
               characterId: value,
-              action: character?.variableDefaults.action ?? current.action,
-              expression: character?.variableDefaults.expression ?? current.expression,
-              prop: character?.variableDefaults.prop ?? current.prop,
-              view: character?.variableDefaults.view ?? current.view,
-              pose: character?.variableDefaults.pose ?? current.pose,
-              composition:
-                character?.variableDefaults.composition ?? current.composition
+              ...taskPromptFields
             }));
           }}
           options={characters.map((character) => ({
