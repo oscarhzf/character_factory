@@ -1,0 +1,26 @@
+{
+  "name": "@character-factory/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./health": "./src/health.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --pool=threads --configLoader=runner",
+    "migrate": "tsx --env-file=../../.env src/migrate.ts",
+    "seed": "tsx --env-file=../../.env src/seed.ts"
+  },
+  "dependencies": {
+    "@character-factory/core": "workspace:*",
+    "@character-factory/prompt-compiler": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "ioredis": "5.10.1",
+    "pg": "8.20.0"
+  }
+}
