@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { JobDetailRecord, PromptVersionRecord } from "@character-factory/core";
+import type { GenerationJobDetail, PromptVersionRecord } from "@character-factory/core";
 
 import { JsonCard } from "@/components/json-card";
 import { PageFrame } from "@/components/page-frame";
-import { StatusChip } from "@/components/status-chip";
 import { requestApi } from "@/lib/api-client";
 
 function formatDate(value: string) {
@@ -17,7 +16,7 @@ function formatDate(value: string) {
 }
 
 export function JobDetailClient({ id }: { id: string }) {
-  const [job, setJob] = useState<JobDetailRecord | null>(null);
+  const [job, setJob] = useState<GenerationJobDetail | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -27,45 +26,63 @@ export function JobDetailClient({ id }: { id: string }) {
     job?.promptVariants[0] ??
     null;
 
-  async function refresh() {
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const data = await requestApi<JobDetailRecord>(`/api/jobs/${id}`);
-      setJob(data);
-      setSelectedVariantId((current) =>
-        current && data.promptVariants.some((variant) => variant.id === current)
-          ? current
-          : (data.promptVariants[0]?.id ?? "")
-      );
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "加载任务详情失败。");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const refreshDetail = useEffectEvent(async () => {
-    await refresh();
-  });
-
   useEffect(() => {
-    void refreshDetail();
+    let cancelled = false;
+
+    async function loadJob() {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      try {
+        const data = await requestApi<GenerationJobDetail>(`/api/jobs/${id}`);
+
+        if (cancelled) {
+          return;
+        }
+
+        setJob(data);
+        setSelectedVariantId((current) =>
+          current && data.promptVariants.some((variant) => variant.id === current)
+            ? current
+            : (data.promptVariants[0]?.id ?? "")
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setErrorMessage(error instanceof Error ? error.message : "Failed to load job.");
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadJob();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   return (
     <PageFrame
       title="Job Detail"
-      description="任务详情页聚合展示 job 基本信息与当前 job 下编译出的 prompt variants，方便后续继续接批量生图和候选图网格。"
+      description="This page is the landing zone for Sprint 3 outputs. Jobs now aggregate persisted prompt variants and candidate images so the create-job workflow can be reviewed end-to-end before the async runner lands."
     >
       <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
-        <Link
-          className="rounded-full border border-[var(--border)] px-3 py-1.5"
-          href={job ? `/characters/${job.character.id}` : "/characters"}
-        >
-          返回角色详情
+        <Link className="rounded-full border border-[var(--border)] px-3 py-1.5" href="/jobs/new">
+          New Job
         </Link>
+        {job ? (
+          <Link
+            className="rounded-full border border-[var(--border)] px-3 py-1.5"
+            href={`/characters/${job.character.id}`}
+          >
+            Character
+          </Link>
+        ) : null}
       </div>
 
       {errorMessage ? (
@@ -76,15 +93,15 @@ export function JobDetailClient({ id }: { id: string }) {
 
       {isLoading ? (
         <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
-          <p className="text-sm text-[var(--muted)]">正在加载任务详情...</p>
+          <p className="text-sm text-[var(--muted)]">Loading job detail...</p>
         </section>
       ) : null}
 
       {!isLoading && !job ? (
         <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">任务不存在</h2>
+          <h2 className="text-lg font-semibold">Job not found</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            当前 job id 没有查到对应记录。
+            The requested generation job id does not exist.
           </p>
         </section>
       ) : null}
@@ -96,33 +113,31 @@ export function JobDetailClient({ id }: { id: string }) {
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="text-xs uppercase tracking-[0.24em] text-[var(--accent)]">
-                    {job.character.code}
+                    {job.mode}
                   </p>
                   <JobStatusChip value={job.status} />
-                  <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-slate-600">
-                    {job.mode}
-                  </span>
                 </div>
                 <h2 className="text-2xl font-semibold">
-                  {job.character.name} / {job.character.universe.code}
+                  {job.character.code} / {job.character.name}
                 </h2>
                 <p className="text-sm text-[var(--muted)]">
-                  Character status: <StatusChip value={job.character.status} />
+                  {job.character.universe.code} / {job.character.universe.name}
                 </p>
               </div>
-              <div className="grid gap-2 text-sm text-[var(--muted)]">
-                <p>Job ID: {job.id}</p>
-                <p>Batch Size: {job.batchSize}</p>
-                <p>Images Per Variant: {job.inputConfig.imagesPerVariant}</p>
-                <p>Created At: {formatDate(job.createdAt)}</p>
-                <p>Updated At: {formatDate(job.updatedAt)}</p>
+              <div className="space-y-2 text-sm text-[var(--muted)]">
+                <p>Created: {formatDate(job.createdAt)}</p>
+                <p>Updated: {formatDate(job.updatedAt)}</p>
+                <p>Batch size: {job.batchSize}</p>
+                <p>Images per variant: {job.inputConfig.imagesPerVariant}</p>
+                <p>Source image: {job.sourceImageId ?? "-"}</p>
+                <p>Created by: {job.createdBy || "-"}</p>
               </div>
             </div>
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
             <JsonCard title="Input Config" value={job.inputConfig} />
-            <JsonCard title="Task Prompt Snapshot" value={job.inputConfig.taskPrompt} />
+            <JsonCard title="Task Prompt" value={job.inputConfig.taskPrompt} />
             <JsonCard
               title="Prompt Variant Summary"
               value={{
@@ -137,7 +152,7 @@ export function JobDetailClient({ id }: { id: string }) {
               <div>
                 <h2 className="text-xl font-semibold">Candidate Images</h2>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  候选图会按 job 维度聚合展示，并绑定所属 prompt variant。
+                  Candidate images are grouped under the job and keep their prompt variant association.
                 </p>
               </div>
               <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-slate-600">
@@ -147,7 +162,7 @@ export function JobDetailClient({ id }: { id: string }) {
 
             {job.generatedImages.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-dashed border-[var(--border)] bg-[#fcfaf4] px-5 py-8 text-sm text-[var(--muted)]">
-                当前 job 还没有 generated_images。后续接上批量生图处理器后，这里会显示候选图网格。
+                This job does not have any `generated_images` yet.
               </div>
             ) : (
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -178,7 +193,7 @@ export function JobDetailClient({ id }: { id: string }) {
                         <p className="font-medium text-slate-800">{image.modelName}</p>
                         <p className="text-[var(--muted)]">Source API: {image.sourceApi}</p>
                         <p className="text-[var(--muted)]">
-                          Created At: {formatDate(image.createdAt)}
+                          Created: {formatDate(image.createdAt)}
                         </p>
                       </div>
                       {image.promptVariant ? (
@@ -186,26 +201,6 @@ export function JobDetailClient({ id }: { id: string }) {
                           {image.promptVariant.strategy}
                         </p>
                       ) : null}
-                      <div className="flex flex-wrap gap-2">
-                        <a
-                          className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs"
-                          href={image.imageUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Open Image
-                        </a>
-                        {image.thumbUrl ? (
-                          <a
-                            className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs"
-                            href={image.thumbUrl}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            Open Thumb
-                          </a>
-                        ) : null}
-                      </div>
                     </div>
                   </article>
                 ))}
@@ -215,9 +210,9 @@ export function JobDetailClient({ id }: { id: string }) {
 
           {job.promptVariants.length === 0 ? (
             <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">暂无 Prompt Variants</h2>
+              <h2 className="text-lg font-semibold">No prompt variants yet</h2>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                当前 job 还没有编译出任何 prompt version。
+                Prompt variants will appear here after job-scoped compilation runs.
               </p>
             </section>
           ) : (
@@ -227,7 +222,7 @@ export function JobDetailClient({ id }: { id: string }) {
                   <div>
                     <h2 className="text-xl font-semibold">Prompt Variants</h2>
                     <p className="mt-1 text-sm text-[var(--muted)]">
-                      当前 job 下已持久化的 prompt_versions。
+                      Persisted prompt versions compiled for this job.
                     </p>
                   </div>
                   <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-slate-600">
@@ -294,13 +289,11 @@ function VariantDetailPanel({ variant }: { variant: PromptVersionRecord }) {
       </section>
 
       <JsonCard title="Template Snapshot" value={variant.debugPayload.templateConfig} />
-
       <PromptTextCard title={`${variant.variantKey} Prompt`} value={variant.compiledPrompt} />
       <PromptTextCard
         title={`${variant.variantKey} Negative Prompt`}
         value={variant.compiledNegativePrompt}
       />
-
       <JsonCard title="Resolved Task Prompt" value={variant.debugPayload.resolvedTaskPrompt} />
       <JsonCard title="Prompt Patch" value={variant.patch ?? null} />
       <JsonCard title="Debug Sections" value={variant.debugPayload.sections} />
@@ -331,7 +324,7 @@ function PromptTextCard({
 function JobStatusChip({
   value
 }: {
-  value: JobDetailRecord["status"];
+  value: GenerationJobDetail["status"];
 }) {
   const palette =
     value === "completed"
@@ -352,7 +345,7 @@ function JobStatusChip({
 function ImageStatusChip({
   value
 }: {
-  value: JobDetailRecord["generatedImages"][number]["status"];
+  value: GenerationJobDetail["generatedImages"][number]["status"];
 }) {
   const palette =
     value === "master"

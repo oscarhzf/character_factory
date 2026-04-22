@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import type {
   CharacterCreateInput,
   CharacterListItem,
-  JobCreateInput,
-  JobDetailRecord,
+  GenerationJobCreateInput,
+  GenerationJobRecord,
   UniverseRecord
 } from "@character-factory/core";
 
@@ -78,12 +78,12 @@ export function CharacterDetailClient({ id }: { id: string }) {
     }
   }
 
-  async function handleCreateJob(payload: JobCreateInput) {
+  async function handleCreateJob(payload: GenerationJobCreateInput) {
     setIsCreatingJob(true);
     setErrorMessage(null);
 
     try {
-      const job = await requestApi<JobDetailRecord>("/api/jobs", {
+      const job = await requestApi<GenerationJobRecord>("/api/jobs", {
         method: "POST",
         body: JSON.stringify(payload)
       });
@@ -168,7 +168,8 @@ export function CharacterDetailClient({ id }: { id: string }) {
               </p>
             </div>
             <JobForm
-              character={character}
+              characters={[character]}
+              initialCharacterId={character.id}
               isSubmitting={isCreatingJob}
               onSubmit={handleCreateJob}
             />

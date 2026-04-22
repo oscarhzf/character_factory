@@ -1,8 +1,8 @@
 import { parseEntityId } from "../service-input";
 import { createValidationError, mapDatabaseError } from "../service-error";
 import { insertGeneratedImageRows } from "../repositories/generated-image-repository";
-import { updateGenerationJobStatus } from "../repositories/job-repository";
-import { getJobDetail } from "./job-service";
+import { updateGenerationJobStatus } from "../repositories/generation-job-repository";
+import { getGenerationJob } from "./generation-job-service";
 
 function strategyPalette(strategy: string) {
   if (strategy === "ratio_boost") {
@@ -56,9 +56,9 @@ function buildPlaceholderImageDataUri(input: {
 
 export async function generateExploreCandidates(
   id: string
-): Promise<Awaited<ReturnType<typeof getJobDetail>>> {
+): Promise<Awaited<ReturnType<typeof getGenerationJob>>> {
   const jobId = parseEntityId(id);
-  const job = await getJobDetail(jobId);
+  const job = await getGenerationJob(jobId);
 
   if (job.mode !== "explore") {
     throw createValidationError("Only explore jobs can generate explore candidates.");
@@ -123,7 +123,7 @@ export async function generateExploreCandidates(
     await insertGeneratedImageRows(rows);
     await updateGenerationJobStatus(jobId, "completed");
 
-    return await getJobDetail(jobId);
+    return await getGenerationJob(jobId);
   } catch (error) {
     await updateGenerationJobStatus(jobId, "failed");
 

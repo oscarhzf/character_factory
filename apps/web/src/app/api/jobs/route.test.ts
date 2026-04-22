@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
-  createJob: vi.fn(),
+  createGenerationJob: vi.fn(),
+  getGenerationJob: vi.fn(),
   generateExploreCandidates: vi.fn()
 }));
 
@@ -19,7 +20,7 @@ describe("POST /api/jobs", () => {
     const characterId = "11111111-1111-4111-8111-111111111111";
     const jobId = "22222222-2222-4222-8222-222222222222";
 
-    dbMocks.createJob.mockResolvedValue({
+    dbMocks.createGenerationJob.mockResolvedValue({
       id: jobId,
       characterId,
       mode: "explore",
@@ -233,7 +234,7 @@ describe("POST /api/jobs", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(201);
-    expect(dbMocks.createJob).toHaveBeenCalledWith({
+    expect(dbMocks.createGenerationJob).toHaveBeenCalledWith({
       characterId,
       mode: "explore",
       inputConfig: {

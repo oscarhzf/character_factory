@@ -1,5 +1,5 @@
 import { createSuccessResponse, entityIdParamsSchema } from "@character-factory/core";
-import { getJobDetail } from "@character-factory/db";
+import { getGenerationJob } from "@character-factory/db";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -14,7 +14,7 @@ export async function GET(
 ) {
   try {
     const { id } = entityIdParamsSchema.parse(await context.params);
-    const job = await getJobDetail(id);
+    const job = await getGenerationJob(id);
     return NextResponse.json(createSuccessResponse(job));
   } catch (error) {
     return createRouteErrorResponse(error);
