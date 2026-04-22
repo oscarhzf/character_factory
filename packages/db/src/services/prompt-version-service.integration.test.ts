@@ -86,6 +86,9 @@ describe("prompt version services integration", () => {
     const stored = await getPromptVersion(result.variants[0]!.id);
     expect(stored.debugPayload.strategy).toBe(stored.strategy);
     expect(stored.compiledNegativePrompt).toContain("fashion_model_feel");
+    expect(stored.debugPayload.templateConfig.globalPromptTemplate).toBe(
+      universe.globalPromptTemplate
+    );
 
     const history = await listPromptVersions(character.id, 12);
     expect(history).toHaveLength(3);
@@ -95,6 +98,35 @@ describe("prompt version services integration", () => {
         "2-style_lock",
         "3-pose_clarity"
       ])
+    );
+
+    const refined = await compilePromptVersions({
+      characterId: character.id,
+      parentPromptVersionId: result.variants[0]!.id,
+      scope: "debug",
+      taskPrompt: {
+        action: "raising the tea cup for a toast"
+      },
+      templateConfig: {
+        globalPromptTemplate:
+          "compact 4-head anime character sheet, guochao city mascot, crisp lineart",
+        globalNegativeTemplate: "photorealistic, cinematic depth of field"
+      },
+      basePatch: {
+        append: ["toast gesture emphasis"]
+      }
+    });
+
+    expect(refined.templateConfig.globalPromptTemplate).toContain(
+      "guochao city mascot"
+    );
+    expect(refined.variants[0]?.parentPromptVersionId).toBe(result.variants[0]!.id);
+    expect(refined.variants[0]?.compiledPrompt).toContain("guochao city mascot");
+    expect(refined.variants[0]?.compiledNegativePrompt).toContain(
+      "cinematic depth of field"
+    );
+    expect(refined.variants[0]?.debugPayload.templateConfig.globalNegativeTemplate).toBe(
+      "photorealistic, cinematic depth of field"
     );
   });
 });

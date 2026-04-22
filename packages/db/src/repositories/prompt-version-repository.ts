@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
 import { getDb } from "../client";
 import { promptVersions } from "../schema";
@@ -33,4 +33,14 @@ export async function listPromptVersionRowsByCharacter(
     .where(eq(promptVersions.characterId, characterId))
     .orderBy(desc(promptVersions.createdAt))
     .limit(limit);
+}
+
+export async function listPromptVersionRowsByJob(
+  jobId: string
+): Promise<PromptVersionRow[]> {
+  return getDb()
+    .select()
+    .from(promptVersions)
+    .where(eq(promptVersions.jobId, jobId))
+    .orderBy(asc(promptVersions.variantKey), asc(promptVersions.createdAt));
 }
