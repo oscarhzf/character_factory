@@ -1,0 +1,22 @@
+import { createSuccessResponse, entityIdParamsSchema } from "@character-factory/core";
+import { getGenerationJob } from "@character-factory/db";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+import { createRouteErrorResponse } from "@/lib/route-error";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = entityIdParamsSchema.parse(await context.params);
+    const job = await getGenerationJob(id);
+    return NextResponse.json(createSuccessResponse(job));
+  } catch (error) {
+    return createRouteErrorResponse(error);
+  }
+}

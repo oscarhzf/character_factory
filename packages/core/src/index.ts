@@ -3,6 +3,7 @@ export * from "./character-schema";
 export * from "./env";
 export * from "./health-schema";
 export * from "./id-schema";
+export * from "./job-schema";
 export * from "./prompt-schema";
 export * from "./schema-helpers";
 export * from "./universe-schema";
