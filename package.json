@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter @character-factory/web dev",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/prompt-compiler/tsconfig.json --noEmit && tsc -p packages/db/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
-    "test": "pnpm --filter @character-factory/core test && pnpm --filter @character-factory/prompt-compiler test && pnpm --filter @character-factory/db test && pnpm --filter @character-factory/web test",
+    "typecheck": "tsc -p packages/core/tsconfig.json --noEmit && tsc -p packages/prompt-compiler/tsconfig.json --noEmit && tsc -p packages/review-engine/tsconfig.json --noEmit && tsc -p packages/db/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "test": "pnpm --filter @character-factory/core test && pnpm --filter @character-factory/prompt-compiler test && pnpm --filter @character-factory/review-engine test && pnpm --filter @character-factory/db test && pnpm --filter @character-factory/web test",
     "ci:lint": "pnpm lint",
     "ci:typecheck": "pnpm typecheck",
     "ci:test": "pnpm test",

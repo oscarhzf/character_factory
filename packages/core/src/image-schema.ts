@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { VariantStrategy } from "./prompt-schema";
+import type { ReviewResultRecord } from "./review-schema";
 
 export const imageStatusValues = [
   "created",
@@ -34,4 +35,5 @@ export interface GeneratedImageRecord {
         strategy: VariantStrategy;
       }
     | null;
+  autoReview: ReviewResultRecord | null;
 }

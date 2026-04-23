@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { GenerationJobDetail, PromptVersionRecord } from "@character-factory/core";
 
+import { FailureTagList } from "@/components/failure-tag-list";
 import { JsonCard } from "@/components/json-card";
 import { PageFrame } from "@/components/page-frame";
+import { ScoreBadge } from "@/components/score-badge";
 import { requestApi } from "@/lib/api-client";
+
+import { sortGeneratedImagesByReview } from "./job-detail-state";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -25,6 +29,9 @@ export function JobDetailClient({ id }: { id: string }) {
     job?.promptVariants.find((variant) => variant.id === selectedVariantId) ??
     job?.promptVariants[0] ??
     null;
+  const sortedImages = job ? sortGeneratedImagesByReview(job.generatedImages) : [];
+  const reviewedImageCount = sortedImages.filter((image) => image.autoReview).length;
+  const topReviewScore = sortedImages[0]?.autoReview?.totalScore ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +76,7 @@ export function JobDetailClient({ id }: { id: string }) {
   return (
     <PageFrame
       title="Job Detail"
-      description="This page is the landing zone for Sprint 3 outputs. Jobs now aggregate persisted prompt variants and candidate images so the create-job workflow can be reviewed end-to-end before the async runner lands."
+      description="This Sprint 4 slice adds structured auto review summaries on top of the existing explore job detail, so prompt variants, generated candidates, and scoring can be inspected in one place."
     >
       <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
         <Link className="rounded-full border border-[var(--border)] px-3 py-1.5" href="/jobs/new">
@@ -152,21 +159,31 @@ export function JobDetailClient({ id }: { id: string }) {
               <div>
                 <h2 className="text-xl font-semibold">Candidate Images</h2>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  Candidate images are grouped under the job and keep their prompt variant association.
+                  Candidate images now keep their prompt variant association and their latest auto review summary.
                 </p>
               </div>
-              <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-slate-600">
-                {job.generatedImages.length}
-              </span>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                <span className="rounded-full border border-[var(--border)] px-3 py-1 font-medium">
+                  {sortedImages.length} candidates
+                </span>
+                <span className="rounded-full border border-[var(--border)] px-3 py-1 font-medium">
+                  {reviewedImageCount} reviewed
+                </span>
+                {topReviewScore !== null ? (
+                  <span className="rounded-full border border-[var(--border)] px-3 py-1 font-medium">
+                    Top score {topReviewScore.toFixed(0)}
+                  </span>
+                ) : null}
+              </div>
             </div>
 
-            {job.generatedImages.length === 0 ? (
+            {sortedImages.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-dashed border-[var(--border)] bg-[#fcfaf4] px-5 py-8 text-sm text-[var(--muted)]">
                 This job does not have any `generated_images` yet.
               </div>
             ) : (
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {job.generatedImages.map((image) => (
+                {sortedImages.map((image) => (
                   <article
                     className="overflow-hidden rounded-3xl border border-[var(--border)] bg-white shadow-sm"
                     key={image.id}
@@ -188,6 +205,12 @@ export function JobDetailClient({ id }: { id: string }) {
                             {image.promptVariant.variantKey}
                           </span>
                         ) : null}
+                        {image.autoReview ? (
+                          <ScoreBadge
+                            bestUse={image.autoReview.bestUse}
+                            score={image.autoReview.totalScore}
+                          />
+                        ) : null}
                       </div>
                       <div className="space-y-1 text-sm">
                         <p className="font-medium text-slate-800">{image.modelName}</p>
@@ -201,6 +224,21 @@ export function JobDetailClient({ id }: { id: string }) {
                           {image.promptVariant.strategy}
                         </p>
                       ) : null}
+                      {image.autoReview ? (
+                        <div className="space-y-3 rounded-2xl bg-slate-50 p-3">
+                          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                            <p>Style {image.autoReview.dimensionScores.styleUnity}</p>
+                            <p>Identity {image.autoReview.dimensionScores.characterIdentity}</p>
+                            <p>Ratio {image.autoReview.dimensionScores.ratioAccuracy}</p>
+                            <p>Pose {image.autoReview.dimensionScores.posePropMatch}</p>
+                          </div>
+                          <FailureTagList tags={image.autoReview.failureTags} />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--muted)]">
+                          Auto review has not been written yet for this candidate.
+                        </p>
+                      )}
                     </div>
                   </article>
                 ))}

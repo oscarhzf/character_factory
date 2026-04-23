@@ -53,11 +53,14 @@ describe("explore job services integration", () => {
     expect(generated.generatedImages).toHaveLength(6);
     expect(generated.generatedImages[0]?.sourceApi).toBe("placeholder");
     expect(generated.generatedImages[0]?.modelName).toBe("explore-placeholder-v1");
+    expect(generated.generatedImages[0]?.status).toBe("reviewed");
     expect(generated.generatedImages[0]?.imageUrl).toContain(
       "data:image/svg+xml"
     );
     expect(generated.generatedImages[0]?.promptVariant?.variantKey).toBe(
       "1-ratio_boost"
     );
+    expect(generated.generatedImages[0]?.autoReview?.totalScore).toBeGreaterThan(0);
+    expect(generated.generatedImages[0]?.autoReview?.reviewerType).toBe("auto");
   });
 });

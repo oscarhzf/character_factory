@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const generatedImageRepositoryMocks = vi.hoisted(() => ({
-  insertGeneratedImageRows: vi.fn()
+  insertGeneratedImageRows: vi.fn(),
+  updateGeneratedImageStatuses: vi.fn()
 }));
 
 const generationJobRepositoryMocks = vi.hoisted(() => ({
@@ -12,9 +13,14 @@ const generationJobServiceMocks = vi.hoisted(() => ({
   getGenerationJob: vi.fn()
 }));
 
+const reviewResultServiceMocks = vi.hoisted(() => ({
+  createAutoReviewResults: vi.fn()
+}));
+
 vi.mock("../repositories/generated-image-repository", () => generatedImageRepositoryMocks);
 vi.mock("../repositories/generation-job-repository", () => generationJobRepositoryMocks);
 vi.mock("./generation-job-service", () => generationJobServiceMocks);
+vi.mock("./review-result-service", () => reviewResultServiceMocks);
 
 import { generateExploreCandidates } from "./explore-job-service";
 
@@ -119,6 +125,26 @@ describe("explore job service", () => {
         id: jobId,
         generatedImages: []
       });
+    generatedImageRepositoryMocks.insertGeneratedImageRows.mockResolvedValue([
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        jobId,
+        promptVersionId: "44444444-4444-4444-8444-444444444444",
+        sourceApi: "placeholder",
+        modelName: "explore-placeholder-v1",
+        imageUrl: "data:image/svg+xml;charset=UTF-8,test",
+        thumbUrl: "data:image/svg+xml;charset=UTF-8,test",
+        revisedPrompt: "[PROMPT]",
+        generationMetaJson: {
+          candidateNumber: 1,
+          size: "1536x1024"
+        },
+        status: "created",
+        createdAt: new Date("2026-04-22T00:00:00.000Z")
+      }
+    ]);
+    reviewResultServiceMocks.createAutoReviewResults.mockResolvedValue([]);
+    generatedImageRepositoryMocks.updateGeneratedImageStatuses.mockResolvedValue([]);
 
     await generateExploreCandidates(jobId);
 
@@ -134,5 +160,12 @@ describe("explore job service", () => {
     expect(rows[0].generationMetaJson).toMatchObject({
       size: "1536x1024"
     });
+    expect(reviewResultServiceMocks.createAutoReviewResults).toHaveBeenCalledTimes(1);
+    expect(
+      generatedImageRepositoryMocks.updateGeneratedImageStatuses
+    ).toHaveBeenCalledWith(
+      ["55555555-5555-4555-8555-555555555555"],
+      "reviewed"
+    );
   });
 });

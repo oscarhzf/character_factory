@@ -89,6 +89,9 @@ importers:
       '@character-factory/prompt-compiler':
         specifier: workspace:*
         version: link:../prompt-compiler
+      '@character-factory/review-engine':
+        specifier: workspace:*
+        version: link:../review-engine
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@types/pg@8.15.6)(pg@8.20.0)
@@ -100,6 +103,12 @@ importers:
         version: 8.20.0
 
   packages/prompt-compiler:
+    dependencies:
+      '@character-factory/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/review-engine:
     dependencies:
       '@character-factory/core':
         specifier: workspace:*
