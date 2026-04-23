@@ -54,6 +54,29 @@ function buildPlaceholderImageDataUri(input: {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
+function parseRenderSize(value: string): { width: number; height: number } {
+  const match = /^(\d+)x(\d+)$/i.exec(value.trim());
+
+  if (!match) {
+    return {
+      width: 1024,
+      height: 1536
+    };
+  }
+
+  const width = Number.parseInt(match[1]!, 10);
+  const height = Number.parseInt(match[2]!, 10);
+
+  if (width <= 0 || height <= 0) {
+    return {
+      width: 1024,
+      height: 1536
+    };
+  }
+
+  return { width, height };
+}
+
 export async function generateExploreCandidates(
   id: string
 ): Promise<Awaited<ReturnType<typeof getGenerationJob>>> {
@@ -79,12 +102,17 @@ export async function generateExploreCandidates(
   await updateGenerationJobStatus(jobId, "running");
 
   try {
+    const renderSize = parseRenderSize(job.inputConfig.size);
+    const thumbSize = {
+      width: Math.round(renderSize.width / 2),
+      height: Math.round(renderSize.height / 2)
+    };
     const rows = promptVariants.flatMap((variant) =>
       Array.from({ length: job.inputConfig.imagesPerVariant }, (_value, index) => {
         const candidateNumber = index + 1;
         const title = `${job.character.code} ${variant.variantKey}`;
         const subtitle = `Candidate ${candidateNumber} / ${variant.strategy}`;
-        const detail = `${job.inputConfig.size} • ${job.inputConfig.quality}`;
+        const detail = `${job.inputConfig.size} / ${job.inputConfig.quality}`;
 
         return {
           jobId,
@@ -95,16 +123,16 @@ export async function generateExploreCandidates(
             title,
             subtitle,
             detail,
-            width: 1024,
-            height: 1280,
+            width: renderSize.width,
+            height: renderSize.height,
             strategy: variant.strategy
           }),
           thumbUrl: buildPlaceholderImageDataUri({
             title,
             subtitle,
             detail,
-            width: 512,
-            height: 640,
+            width: thumbSize.width,
+            height: thumbSize.height,
             strategy: variant.strategy
           }),
           revisedPrompt: variant.compiledPrompt,

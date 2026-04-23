@@ -55,14 +55,11 @@ function hasPatchContent(patch: PromptPatch | null | undefined) {
 }
 
 function hasTemplateSnapshot(templateConfig: PromptTemplateConfig | undefined) {
-  if (!templateConfig) {
-    return false;
-  }
+  return templateConfig !== undefined;
+}
 
-  return Boolean(
-    templateConfig.globalPromptTemplate.trim() ||
-      templateConfig.globalNegativeTemplate.trim()
-  );
+function canReplayVersion(version: PromptVersionRecord) {
+  return hasPatchContent(version.patch) || hasTemplateSnapshot(version.debugPayload.templateConfig);
 }
 
 function findCharacter(
@@ -265,7 +262,7 @@ export function PromptDebugClient() {
         remove: arrayToLines(version.patch?.remove)
       };
 
-      if (hasTemplateSnapshot(version.debugPayload.templateConfig)) {
+      if (version.debugPayload.templateConfig) {
         nextState.globalPromptTemplate =
           version.debugPayload.templateConfig.globalPromptTemplate;
         nextState.globalNegativeTemplate =
@@ -705,7 +702,7 @@ export function PromptDebugClient() {
                   </button>
                   <button
                     className="rounded-full border border-[var(--border)] px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={!hasPatchContent(selectedVersion.patch)}
+                    disabled={!canReplayVersion(selectedVersion)}
                     onClick={() => handleReplayPatch(selectedVersion)}
                     type="button"
                   >
@@ -798,7 +795,7 @@ function VersionActionCard({
         </button>
         <button
           className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!hasPatchContent(version.patch)}
+          disabled={!canReplayVersion(version)}
           onClick={onReplayPatch}
           type="button"
         >
