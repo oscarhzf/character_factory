@@ -2,13 +2,17 @@
 
 import { useEffect, useEffectEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type {
   CharacterCreateInput,
   CharacterListItem,
+  GenerationJobCreateInput,
+  GenerationJobRecord,
   UniverseRecord
 } from "@character-factory/core";
 
 import { CharacterForm } from "@/components/character-form";
+import { JobForm } from "@/components/job-form";
 import { JsonCard } from "@/components/json-card";
 import { PageFrame } from "@/components/page-frame";
 import { StatusChip } from "@/components/status-chip";
@@ -22,10 +26,12 @@ function formatDate(value: string) {
 }
 
 export function CharacterDetailClient({ id }: { id: string }) {
+  const router = useRouter();
   const [universes, setUniverses] = useState<UniverseRecord[]>([]);
   const [character, setCharacter] = useState<CharacterListItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingJob, setIsCreatingJob] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function refresh() {
@@ -41,7 +47,7 @@ export function CharacterDetailClient({ id }: { id: string }) {
       setCharacter(characterData);
       setUniverses(universeData);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "加载失败。");
+      setErrorMessage(error instanceof Error ? error.message : "加载角色详情失败。");
     } finally {
       setIsLoading(false);
     }
@@ -66,16 +72,33 @@ export function CharacterDetailClient({ id }: { id: string }) {
       });
       setCharacter(updated);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "保存失败。");
+      setErrorMessage(error instanceof Error ? error.message : "保存角色设定失败。");
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  async function handleCreateJob(payload: GenerationJobCreateInput) {
+    setIsCreatingJob(true);
+    setErrorMessage(null);
+
+    try {
+      const job = await requestApi<GenerationJobRecord>("/api/jobs", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      router.push(`/jobs/${job.id}`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "创建任务失败。");
+    } finally {
+      setIsCreatingJob(false);
+    }
+  }
+
   return (
     <PageFrame
-      title="Character 详情"
-      description="详情页直接展示结构化设定字段，并提供原地编辑入口。这里不提前接入任务、评审或 Prompt 相关逻辑。"
+      title="Character Detail"
+      description="角色详情页同时承载结构化设定维护和 create job 入口。创建后会直接进入 job detail 查看本轮编译出的 prompt variants。"
     >
       <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
         <Link className="rounded-full border border-[var(--border)] px-3 py-1.5" href="/characters">
@@ -117,14 +140,14 @@ export function CharacterDetailClient({ id }: { id: string }) {
                 </div>
                 <h2 className="text-2xl font-semibold">{character.name}</h2>
                 <p className="text-sm text-[var(--muted)]">
-                  所属 Universe：{character.universe.code} / {character.universe.name}
+                  所属 Universe: {character.universe.code} / {character.universe.name}
                 </p>
                 <p className="text-sm leading-6 text-slate-700">
                   {character.description || "暂无角色说明。"}
                 </p>
               </div>
               <div className="text-sm text-[var(--muted)]">
-                更新于 {formatDate(character.updatedAt)}
+                最近更新: {formatDate(character.updatedAt)}
               </div>
             </div>
           </section>
@@ -139,9 +162,24 @@ export function CharacterDetailClient({ id }: { id: string }) {
 
           <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
             <div className="mb-5">
+              <h2 className="text-xl font-semibold">Create Job</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                当前先接通 explore job 创建、prompt_versions 编译和详情页展示。提交后会直接跳到 job detail。
+              </p>
+            </div>
+            <JobForm
+              characters={[character]}
+              initialCharacterId={character.id}
+              isSubmitting={isCreatingJob}
+              onSubmit={handleCreateJob}
+            />
+          </section>
+
+          <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
+            <div className="mb-5">
               <h2 className="text-xl font-semibold">编辑角色设定</h2>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                保存后，详情区会立即刷新为数据库中的结构化结果。
+                保存后，详情区域会立即刷新为数据库中的最新结构化结果。
               </p>
             </div>
             <CharacterForm

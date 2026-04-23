@@ -1,13 +1,13 @@
 import { and, desc, eq } from "drizzle-orm";
 
 import { getDb } from "../client";
-import { characters, generationJobs, universes } from "../schema";
+import { characters, generationJobs, promptVersions, universes } from "../schema";
 
 export type GenerationJobRow = typeof generationJobs.$inferSelect;
 
 export interface GenerationJobRowWithCharacter {
   job: GenerationJobRow;
-  character: Pick<typeof characters.$inferSelect, "id" | "code" | "name">;
+  character: Pick<typeof characters.$inferSelect, "id" | "code" | "name" | "status">;
   universe: Pick<typeof universes.$inferSelect, "id" | "code" | "name">;
 }
 
@@ -37,7 +37,8 @@ export async function listGenerationJobRows(filters?: {
       character: {
         id: characters.id,
         code: characters.code,
-        name: characters.name
+        name: characters.name,
+        status: characters.status
       },
       universe: {
         id: universes.id,
@@ -67,7 +68,8 @@ export async function findGenerationJobRowById(
       character: {
         id: characters.id,
         code: characters.code,
-        name: characters.name
+        name: characters.name,
+        status: characters.status
       },
       universe: {
         id: universes.id,
@@ -88,5 +90,36 @@ export async function insertGenerationJobRow(
   values: typeof generationJobs.$inferInsert
 ): Promise<GenerationJobRow> {
   const [row] = await getDb().insert(generationJobs).values(values).returning();
+  return row;
+}
+
+export async function insertGenerationJobWithPromptVersionRows(
+  jobValues: typeof generationJobs.$inferInsert,
+  createPromptVersionValues: (
+    job: GenerationJobRow
+  ) => Array<typeof promptVersions.$inferInsert>
+): Promise<GenerationJobRow> {
+  return getDb().transaction(async (tx) => {
+    const [job] = await tx.insert(generationJobs).values(jobValues).returning();
+    const promptVersionValues = createPromptVersionValues(job);
+
+    await tx.insert(promptVersions).values(promptVersionValues).returning();
+
+    return job;
+  });
+}
+
+export async function updateGenerationJobStatus(
+  id: string,
+  status: typeof generationJobs.$inferSelect.status
+): Promise<GenerationJobRow | undefined> {
+  const [row] = await getDb()
+    .update(generationJobs)
+    .set({
+      status
+    })
+    .where(eq(generationJobs.id, id))
+    .returning();
+
   return row;
 }

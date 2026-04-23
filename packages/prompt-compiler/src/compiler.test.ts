@@ -99,6 +99,9 @@ describe("compilePrompt", () => {
     expect(result.compiledPrompt).toContain("[PATCH]");
     expect(result.compiledNegativePrompt).toContain("photorealistic");
     expect(result.compiledNegativePrompt).toContain("fashion_model_feel");
+    expect(result.debugPayload.templateConfig.globalPromptTemplate).toBe(
+      universe.globalPromptTemplate
+    );
     expect(result.debugPayload.sections.variant).toContain(
       "strengthen the exact 4-head proportion read"
     );

@@ -1,10 +1,12 @@
 import {
   defaultPromptPatch,
+  defaultPromptTemplateConfig,
   defaultTaskPrompt,
   promptDebugPayloadSchema,
   resolveTaskPrompt,
   serializePromptCompileInput,
   serializePromptPatch,
+  serializePromptTemplateConfig,
   type PromptCompileInput,
   type PromptCompileResult,
   type PromptDebugPayload,
@@ -17,7 +19,9 @@ import { buildVariantPrompts } from "@character-factory/prompt-compiler";
 import {
   findPromptVersionRowById,
   insertPromptVersionRows,
-  listPromptVersionRowsByCharacter
+  listPromptVersionRowsByCharacter,
+  listPromptVersionRowsByJob,
+  type PromptVersionRow
 } from "../repositories/prompt-version-repository";
 import { parseEntityId } from "../service-input";
 import { createNotFoundError, mapDatabaseError } from "../service-error";
@@ -31,6 +35,7 @@ function createFallbackDebugPayload(
   return {
     variantKey,
     strategy,
+    templateConfig: defaultPromptTemplateConfig,
     resolvedTaskPrompt: defaultTaskPrompt,
     normalizedPatch: defaultPromptPatch,
     sections: {
@@ -45,10 +50,8 @@ function createFallbackDebugPayload(
   };
 }
 
-function toPromptVersionRecord(
-  row: Awaited<ReturnType<typeof findPromptVersionRowById>> extends infer TResult
-    ? Exclude<TResult, undefined>
-    : never
+export function mapPromptVersionRowToRecord(
+  row: PromptVersionRow
 ): PromptVersionRecord {
   const strategy = variantStrategySchema.parse(row.strategy);
   const variantKey = row.variantKey ?? strategy;
@@ -81,7 +84,20 @@ export async function listPromptVersions(
 
   try {
     const rows = await listPromptVersionRowsByCharacter(characterId, limit);
-    return rows.map((row) => toPromptVersionRecord(row));
+    return rows.map((row) => mapPromptVersionRowToRecord(row));
+  } catch (error) {
+    throw mapDatabaseError(error);
+  }
+}
+
+export async function listPromptVersionsByJob(
+  jobId: string
+): Promise<PromptVersionRecord[]> {
+  const generationJobId = parseEntityId(jobId);
+
+  try {
+    const rows = await listPromptVersionRowsByJob(generationJobId);
+    return rows.map((row) => mapPromptVersionRowToRecord(row));
   } catch (error) {
     throw mapDatabaseError(error);
   }
@@ -95,7 +111,7 @@ export async function getPromptVersion(id: string): Promise<PromptVersionRecord>
     throw createNotFoundError("Prompt version");
   }
 
-  return toPromptVersionRecord(row);
+  return mapPromptVersionRowToRecord(row);
 }
 
 export async function compilePromptVersions(
@@ -104,12 +120,22 @@ export async function compilePromptVersions(
   const values = serializePromptCompileInput(input);
   const character = await getCharacter(values.characterId);
   const universe = await getUniverse(character.universe.id);
+  const resolvedTemplateConfig =
+    values.templateConfig ??
+    serializePromptTemplateConfig({
+      globalPromptTemplate: universe.globalPromptTemplate,
+      globalNegativeTemplate: universe.globalNegativeTemplate
+    });
   const resolvedTaskPrompt = resolveTaskPrompt(
     character.variableDefaults,
     values.taskPrompt
   );
   const compiledVariants = buildVariantPrompts({
-    universe,
+    universe: {
+      ...universe,
+      globalPromptTemplate: resolvedTemplateConfig.globalPromptTemplate,
+      globalNegativeTemplate: resolvedTemplateConfig.globalNegativeTemplate
+    },
     character,
     taskPrompt: resolvedTaskPrompt,
     strategies: values.variantStrategies,
@@ -143,8 +169,9 @@ export async function compilePromptVersions(
         code: universe.code,
         name: universe.name
       },
+      templateConfig: resolvedTemplateConfig,
       resolvedTaskPrompt,
-      variants: rows.map((row) => toPromptVersionRecord(row))
+      variants: rows.map((row) => mapPromptVersionRowToRecord(row))
     };
   } catch (error) {
     throw mapDatabaseError(error);

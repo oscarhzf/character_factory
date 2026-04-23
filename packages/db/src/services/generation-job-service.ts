@@ -1,4 +1,5 @@
 import {
+  resolveTaskPrompt,
   serializeGenerationJobCreateInput,
   serializeGenerationJobInputConfig,
   type GenerationJobCreateInput,
@@ -8,17 +9,21 @@ import {
   type JobMode,
   type JobStatus
 } from "@character-factory/core";
+import { buildVariantPrompts } from "@character-factory/prompt-compiler";
 
-import { findCharacterRowById } from "../repositories/character-repository";
 import {
   findGenerationJobRowById,
-  insertGenerationJobRow,
+  insertGenerationJobWithPromptVersionRows,
   listGenerationJobRows,
   type GenerationJobRow,
   type GenerationJobRowWithCharacter
 } from "../repositories/generation-job-repository";
 import { parseEntityId } from "../service-input";
 import { createNotFoundError, mapDatabaseError } from "../service-error";
+import { getCharacter } from "./character-service";
+import { listGeneratedImagesByJob } from "./generated-image-service";
+import { listPromptVersionsByJob } from "./prompt-version-service";
+import { getUniverse } from "./universe-service";
 
 function toGenerationJobRecord(row: GenerationJobRow): GenerationJobRecord {
   return {
@@ -44,6 +49,7 @@ function toGenerationJobListItem(
       id: row.character.id,
       code: row.character.code,
       name: row.character.name,
+      status: row.character.status,
       universe: {
         id: row.universe.id,
         code: row.universe.code,
@@ -51,14 +57,6 @@ function toGenerationJobListItem(
       }
     }
   };
-}
-
-async function ensureCharacterExists(characterId: string): Promise<void> {
-  const row = await findCharacterRowById(characterId);
-
-  if (!row) {
-    throw createNotFoundError("Character");
-  }
 }
 
 export async function listGenerationJobs(filters?: {
@@ -95,7 +93,16 @@ export async function getGenerationJob(id: string): Promise<GenerationJobDetail>
       throw createNotFoundError("Generation job");
     }
 
-    return toGenerationJobListItem(row);
+    const [promptVariants, generatedImages] = await Promise.all([
+      listPromptVersionsByJob(jobId),
+      listGeneratedImagesByJob(jobId)
+    ]);
+
+    return {
+      ...toGenerationJobListItem(row),
+      promptVariants,
+      generatedImages
+    };
   } catch (error) {
     if (error instanceof Error && error.name === "ServiceError") {
       throw error;
@@ -109,18 +116,43 @@ export async function createGenerationJob(
   input: GenerationJobCreateInput
 ): Promise<GenerationJobRecord> {
   const values = serializeGenerationJobCreateInput(input);
-  await ensureCharacterExists(values.characterId);
+  const character = await getCharacter(values.characterId);
+  const universe = await getUniverse(character.universe.id);
+  const resolvedTaskPrompt = resolveTaskPrompt(
+    character.variableDefaults,
+    values.inputConfig.taskPrompt
+  );
 
   try {
-    const row = await insertGenerationJobRow({
-      characterId: values.characterId,
-      mode: values.mode,
-      status: "queued",
-      sourceImageId: values.sourceImageId,
-      inputConfigJson: values.inputConfig,
-      batchSize: values.batchSize,
-      createdBy: values.createdBy || null
-    });
+    const row = await insertGenerationJobWithPromptVersionRows(
+      {
+        characterId: values.characterId,
+        mode: values.mode,
+        status: "queued",
+        sourceImageId: values.sourceImageId,
+        inputConfigJson: values.inputConfig,
+        batchSize: values.batchSize,
+        createdBy: values.createdBy || null
+      },
+      (job) =>
+        buildVariantPrompts({
+          universe,
+          character,
+          taskPrompt: resolvedTaskPrompt,
+          strategies: values.inputConfig.variantStrategies
+        }).map((variant) => ({
+          characterId: values.characterId,
+          jobId: job.id,
+          parentPromptVersionId: null,
+          scope: "job",
+          variantKey: variant.variantKey,
+          strategy: variant.strategy,
+          compiledPrompt: variant.compiledPrompt,
+          compiledNegativePrompt: variant.compiledNegativePrompt,
+          patchJson: variant.patch,
+          debugPayloadJson: variant.debugPayload
+        }))
+    );
 
     return toGenerationJobRecord(row);
   } catch (error) {

@@ -1,13 +1,15 @@
 import { z } from "zod";
 
-import { normalizeText } from "./schema-helpers";
+import type { GeneratedImageRecord } from "./image-schema";
 import {
   defaultVariantStrategies,
   serializeTaskPrompt,
+  type PromptVersionRecord,
   type TaskPrompt,
   type VariantStrategy,
   variantStrategySchema
 } from "./prompt-schema";
+import { normalizeText } from "./schema-helpers";
 
 export const jobModeSchema = z.enum(["explore", "refine", "edit"]);
 
@@ -39,14 +41,13 @@ const generationJobTaskPromptInputSchema = z
   .passthrough()
   .default({});
 
-export const generationJobInputConfigSchema = z
-  .object({
-    taskPrompt: generationJobTaskPromptInputSchema.optional(),
-    variantStrategies: z.array(z.unknown()).optional(),
-    imagesPerVariant: z.coerce.number().int().min(1).max(8).default(4),
-    size: z.string().trim().min(1).max(32).default("1024x1536"),
-    quality: imageQualitySchema.default("high")
-  });
+export const generationJobInputConfigSchema = z.object({
+  taskPrompt: generationJobTaskPromptInputSchema.optional(),
+  variantStrategies: z.array(z.unknown()).optional(),
+  imagesPerVariant: z.coerce.number().int().min(1).max(8).default(4),
+  size: z.string().trim().min(1).max(32).default("1024x1536"),
+  quality: imageQualitySchema.default("high")
+});
 
 export const generationJobCreateInputSchema = z
   .object({
@@ -111,6 +112,7 @@ export interface GenerationJobCharacterSummary {
   id: string;
   code: string;
   name: string;
+  status?: "draft" | "active" | "locked";
   universe: {
     id: string;
     code: string;
@@ -122,7 +124,10 @@ export interface GenerationJobListItem extends GenerationJobRecord {
   character: GenerationJobCharacterSummary;
 }
 
-export type GenerationJobDetail = GenerationJobListItem;
+export interface GenerationJobDetail extends GenerationJobListItem {
+  promptVariants: PromptVersionRecord[];
+  generatedImages: GeneratedImageRecord[];
+}
 
 function defaultJobVariantStrategies(mode: JobMode): VariantStrategy[] {
   return mode === "explore" ? [...defaultVariantStrategies] : ["style_lock"];
@@ -159,6 +164,10 @@ export function serializeGenerationJobInputConfig(
   };
 }
 
+export function calculateJobBatchSize(inputConfig: GenerationJobInputConfig): number {
+  return inputConfig.imagesPerVariant * inputConfig.variantStrategies.length;
+}
+
 export function serializeGenerationJobCreateInput(
   input: GenerationJobCreateInput
 ): SerializedGenerationJobCreateInput {
@@ -169,7 +178,38 @@ export function serializeGenerationJobCreateInput(
     mode: input.mode,
     sourceImageId: input.sourceImageId ?? null,
     inputConfig,
-    batchSize: inputConfig.imagesPerVariant * inputConfig.variantStrategies.length,
+    batchSize: calculateJobBatchSize(inputConfig),
     createdBy: normalizeText(input.createdBy)
   };
 }
+
+export function resolveJobTaskPrompt(
+  inputConfig: GenerationJobInputConfig,
+  fallbackTaskPrompt: TaskPrompt
+): TaskPrompt {
+  return {
+    action: inputConfig.taskPrompt.action || fallbackTaskPrompt.action,
+    expression: inputConfig.taskPrompt.expression || fallbackTaskPrompt.expression,
+    prop: inputConfig.taskPrompt.prop || fallbackTaskPrompt.prop,
+    view: inputConfig.taskPrompt.view || fallbackTaskPrompt.view,
+    pose: inputConfig.taskPrompt.pose || fallbackTaskPrompt.pose,
+    composition:
+      inputConfig.taskPrompt.composition || fallbackTaskPrompt.composition
+  };
+}
+
+export function isVariantStrategySelected(
+  strategies: readonly VariantStrategy[],
+  candidate: VariantStrategy
+): boolean {
+  return strategies.includes(candidate);
+}
+
+export const jobInputConfigSchema = generationJobInputConfigSchema;
+export type JobInputConfig = GenerationJobInputConfig;
+export const jobCreateInputSchema = generationJobCreateInputSchema;
+export type JobCreateInput = GenerationJobCreateInput;
+export type JobRecord = GenerationJobRecord;
+export type JobDetailRecord = GenerationJobDetail;
+export const serializeJobInputConfig = serializeGenerationJobInputConfig;
+export const serializeJobCreateInput = serializeGenerationJobCreateInput;

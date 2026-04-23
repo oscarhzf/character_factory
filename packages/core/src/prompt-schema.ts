@@ -52,6 +52,18 @@ export const defaultPromptPatch: PromptPatch = {
   remove: []
 };
 
+export const promptTemplateConfigSchema = z.object({
+  globalPromptTemplate: z.string(),
+  globalNegativeTemplate: z.string()
+});
+
+export type PromptTemplateConfig = z.infer<typeof promptTemplateConfigSchema>;
+
+export const defaultPromptTemplateConfig: PromptTemplateConfig = {
+  globalPromptTemplate: "",
+  globalNegativeTemplate: ""
+};
+
 export const promptDebugSectionsSchema = z.object({
   universe: z.array(z.string()),
   character: z.array(z.string()),
@@ -67,6 +79,7 @@ export type PromptDebugSections = z.infer<typeof promptDebugSectionsSchema>;
 export const promptDebugPayloadSchema = z.object({
   variantKey: z.string().trim().min(1),
   strategy: variantStrategySchema,
+  templateConfig: promptTemplateConfigSchema.default(defaultPromptTemplateConfig),
   resolvedTaskPrompt: taskPromptSchema,
   normalizedPatch: promptPatchSchema,
   sections: promptDebugSectionsSchema
@@ -97,6 +110,13 @@ const promptPatchInputSchema = z
   .passthrough()
   .default({});
 
+const promptTemplateConfigInputSchema = z
+  .object({
+    globalPromptTemplate: z.unknown(),
+    globalNegativeTemplate: z.unknown()
+  })
+  .passthrough();
+
 export const promptCompileInputSchema = z.object({
   characterId: z.uuid(),
   jobId: z.uuid().optional(),
@@ -104,7 +124,8 @@ export const promptCompileInputSchema = z.object({
   scope: z.string().trim().min(1).default("debug"),
   taskPrompt: taskPromptInputSchema.optional(),
   variantStrategies: z.array(z.unknown()).optional(),
-  basePatch: promptPatchInputSchema.optional()
+  basePatch: promptPatchInputSchema.optional(),
+  templateConfig: promptTemplateConfigInputSchema.optional()
 });
 
 export type PromptCompileInput = z.infer<typeof promptCompileInputSchema>;
@@ -122,6 +143,7 @@ export interface SerializedPromptCompileInput {
   taskPrompt: TaskPrompt;
   variantStrategies: VariantStrategy[];
   basePatch: PromptPatch;
+  templateConfig: PromptTemplateConfig | null;
 }
 
 export interface PromptVersionRecord {
@@ -150,6 +172,7 @@ export interface PromptCompileResult {
     code: string;
     name: string;
   };
+  templateConfig: PromptTemplateConfig;
   resolvedTaskPrompt: TaskPrompt;
   variants: PromptVersionRecord[];
 }
@@ -196,6 +219,17 @@ export function serializePromptPatch(input: unknown): PromptPatch {
   };
 }
 
+export function serializePromptTemplateConfig(
+  input: unknown
+): PromptTemplateConfig {
+  const parsed = promptTemplateConfigInputSchema.parse(input);
+
+  return {
+    globalPromptTemplate: normalizeText(parsed.globalPromptTemplate),
+    globalNegativeTemplate: normalizeText(parsed.globalNegativeTemplate)
+  };
+}
+
 export function hasPromptPatchContent(patch: PromptPatch): boolean {
   return Object.values(patch).some((value) => value.length > 0);
 }
@@ -223,6 +257,9 @@ export function serializePromptCompileInput(
     scope: normalizeText(input.scope) || "debug",
     taskPrompt: serializeTaskPrompt(input.taskPrompt),
     variantStrategies: serializeVariantStrategies(input.variantStrategies),
-    basePatch: serializePromptPatch(input.basePatch)
+    basePatch: serializePromptPatch(input.basePatch),
+    templateConfig: input.templateConfig
+      ? serializePromptTemplateConfig(input.templateConfig)
+      : null
   };
 }

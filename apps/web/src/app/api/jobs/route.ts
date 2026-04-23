@@ -3,7 +3,12 @@ import {
   generationJobCreateInputSchema,
   generationJobListQuerySchema
 } from "@character-factory/core";
-import { createGenerationJob, listGenerationJobs } from "@character-factory/db";
+import {
+  createGenerationJob,
+  generateExploreCandidates,
+  getGenerationJob,
+  listGenerationJobs
+} from "@character-factory/db";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -31,7 +36,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const payload = generationJobCreateInputSchema.parse(await request.json());
-    const job = await createGenerationJob(payload);
+    const created = await createGenerationJob(payload);
+    const job =
+      created.mode === "explore"
+        ? await generateExploreCandidates(created.id)
+        : await getGenerationJob(created.id);
+
     return NextResponse.json(createSuccessResponse(job), { status: 201 });
   } catch (error) {
     return createRouteErrorResponse(error);

@@ -286,6 +286,10 @@ export function compilePrompt(input: CompilePromptInput): CompiledPromptVariant 
     debugPayload: {
       variantKey: input.variantKey,
       strategy: input.strategy,
+      templateConfig: {
+        globalPromptTemplate: input.universe.globalPromptTemplate,
+        globalNegativeTemplate: input.universe.globalNegativeTemplate
+      },
       resolvedTaskPrompt: input.taskPrompt,
       normalizedPatch,
       sections: {

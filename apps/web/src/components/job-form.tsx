@@ -33,7 +33,8 @@ export function JobForm({
   const selectedCharacter =
     characters.find((character) => character.id === form.characterId) ?? null;
   const sourceImageRequired = form.mode !== "explore";
-  const disabled = isSubmitting || characters.length === 0;
+  const disabled =
+    isSubmitting || characters.length === 0 || form.strategies.length === 0;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -198,12 +199,19 @@ export function JobForm({
                 <input
                   checked={checked}
                   onChange={(event) => {
-                    setForm((current) => ({
-                      ...current,
-                      strategies: event.target.checked
+                    setForm((current) => {
+                      const nextStrategies = event.target.checked
                         ? [...current.strategies, strategy]
-                        : current.strategies.filter((item) => item !== strategy)
-                    }));
+                        : current.strategies.filter((item) => item !== strategy);
+
+                      return {
+                        ...current,
+                        strategies:
+                          nextStrategies.length > 0
+                            ? nextStrategies
+                            : current.strategies
+                      };
+                    });
                   }}
                   type="checkbox"
                 />
