@@ -152,12 +152,33 @@ describe("POST /api/jobs", () => {
           generationMeta: {
             placeholder: true
           },
-          status: "created",
+          status: "reviewed",
           createdAt: "2026-04-22T00:00:00.000Z",
           promptVariant: {
             id: "44444444-4444-4444-8444-444444444444",
             variantKey: "1-ratio_boost",
             strategy: "ratio_boost"
+          },
+          autoReview: {
+            id: "66666666-6666-4666-8666-666666666666",
+            imageId: "55555555-5555-4555-8555-555555555555",
+            reviewerType: "auto",
+            characterCode: "SZ-V1",
+            isValidCandidate: true,
+            totalScore: 88,
+            dimensionScores: {
+              styleUnity: 23,
+              characterIdentity: 17,
+              ratioAccuracy: 18,
+              posePropMatch: 8,
+              paletteMatch: 9,
+              sheetIntegrity: 9,
+              masterPotential: 4
+            },
+            failureTags: [],
+            fixSuggestions: [],
+            bestUse: "candidate_master",
+            createdAt: "2026-04-22T00:00:00.000Z"
           }
         }
       ],
@@ -252,5 +273,6 @@ describe("POST /api/jobs", () => {
     expect(payload.data.promptVariants).toHaveLength(1);
     expect(payload.data.generatedImages).toHaveLength(1);
     expect(payload.data.status).toBe("completed");
+    expect(payload.data.generatedImages[0].autoReview.totalScore).toBe(88);
   });
 });

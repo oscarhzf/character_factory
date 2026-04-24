@@ -19,6 +19,8 @@
       "@character-factory/core/*": ["packages/core/src/*"],
       "@character-factory/prompt-compiler": ["packages/prompt-compiler/src/index.ts"],
       "@character-factory/prompt-compiler/*": ["packages/prompt-compiler/src/*"],
+      "@character-factory/review-engine": ["packages/review-engine/src/index.ts"],
+      "@character-factory/review-engine/*": ["packages/review-engine/src/*"],
       "@character-factory/db": ["packages/db/src/index.ts"],
       "@character-factory/db/*": ["packages/db/src/*"]
     }

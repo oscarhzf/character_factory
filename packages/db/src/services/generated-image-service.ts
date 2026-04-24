@@ -9,10 +9,43 @@ import {
 } from "../repositories/generated-image-repository";
 import { parseEntityId } from "../service-input";
 import { mapDatabaseError } from "../service-error";
+import { mapReviewResultRowToRecord } from "./review-result-service";
 
 export function mapGeneratedImageRowToRecord(
   row: GeneratedImageRowWithPromptVariant
 ): GeneratedImageRecord {
+  const autoReview =
+    row.autoReview &&
+    row.autoReview.id &&
+    row.autoReview.reviewerType &&
+    row.autoReview.totalScore &&
+    row.autoReview.styleScore &&
+    row.autoReview.identityScore &&
+    row.autoReview.ratioScore &&
+    row.autoReview.poseScore &&
+    row.autoReview.paletteScore &&
+    row.autoReview.sheetScore &&
+    row.autoReview.masterPotentialScore &&
+    row.autoReview.createdAt
+      ? mapReviewResultRowToRecord({
+          id: row.autoReview.id,
+          imageId: row.image.id,
+          reviewerType:
+            row.autoReview.reviewerType === "human" ? "human" : "auto",
+          totalScore: row.autoReview.totalScore,
+          styleScore: row.autoReview.styleScore,
+          identityScore: row.autoReview.identityScore,
+          ratioScore: row.autoReview.ratioScore,
+          poseScore: row.autoReview.poseScore,
+          paletteScore: row.autoReview.paletteScore,
+          sheetScore: row.autoReview.sheetScore,
+          masterPotentialScore: row.autoReview.masterPotentialScore,
+          tagsJson: row.autoReview.tagsJson,
+          notesJson: row.autoReview.notesJson,
+          createdAt: row.autoReview.createdAt
+        })
+      : null;
+
   return {
     id: row.image.id,
     jobId: row.image.jobId,
@@ -40,7 +73,8 @@ export function mapGeneratedImageRowToRecord(
             variantKey: row.promptVariant.variantKey,
             strategy: variantStrategySchema.parse(row.promptVariant.strategy)
           }
-        : null
+        : null,
+    autoReview
   };
 }
 

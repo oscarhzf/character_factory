@@ -8,4 +8,5 @@ export * from "./services/generated-image-service";
 export * from "./services/generation-job-service";
 export * from "./services/job-service";
 export * from "./services/prompt-version-service";
+export * from "./services/review-result-service";
 export * from "./services/universe-service";

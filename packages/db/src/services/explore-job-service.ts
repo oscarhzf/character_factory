@@ -1,7 +1,13 @@
+import { reviewCandidateImage } from "@character-factory/review-engine";
+
 import { parseEntityId } from "../service-input";
 import { createValidationError, mapDatabaseError } from "../service-error";
-import { insertGeneratedImageRows } from "../repositories/generated-image-repository";
+import {
+  insertGeneratedImageRows,
+  updateGeneratedImageStatuses
+} from "../repositories/generated-image-repository";
 import { updateGenerationJobStatus } from "../repositories/generation-job-repository";
+import { createAutoReviewResults } from "./review-result-service";
 import { getGenerationJob } from "./generation-job-service";
 
 function strategyPalette(strategy: string) {
@@ -148,7 +154,43 @@ export async function generateExploreCandidates(
       })
     );
 
-    await insertGeneratedImageRows(rows);
+    const createdImages = await insertGeneratedImageRows(rows);
+    await updateGenerationJobStatus(jobId, "reviewing");
+
+    await createAutoReviewResults(
+      createdImages.map((image) => {
+        const promptVariant = promptVariants.find(
+          (variant) => variant.id === image.promptVersionId
+        );
+        const candidateNumber =
+          image.generationMetaJson &&
+          typeof image.generationMetaJson === "object" &&
+          "candidateNumber" in image.generationMetaJson &&
+          typeof image.generationMetaJson.candidateNumber === "number"
+            ? image.generationMetaJson.candidateNumber
+            : 1;
+
+        if (!promptVariant) {
+          throw createValidationError("Generated image is missing its prompt variant.");
+        }
+
+        return {
+          imageId: image.id,
+          review: reviewCandidateImage({
+            characterCode: job.character.code,
+            variantKey: promptVariant.variantKey,
+            strategy: promptVariant.strategy,
+            candidateNumber,
+            taskPrompt: job.inputConfig.taskPrompt
+          })
+        };
+      })
+    );
+
+    await updateGeneratedImageStatuses(
+      createdImages.map((image) => image.id),
+      "reviewed"
+    );
     await updateGenerationJobStatus(jobId, "completed");
 
     return await getGenerationJob(jobId);
